@@ -1,74 +1,47 @@
-// Standard Lock - background interceptor.
-// "Nothing opens without permission."
-//
-// Launch modes:
-//   1. `standard-lock.exe "C:\path\to\file.txt"`
-//        This is how Windows launches us: it's the registered handler
-//        for locked extensions. We show the password prompt, and on
-//        success hand the file to its real, original application.
-//   2. `standard-lock.exe` (no args)
-//        Runs quietly in the system tray. Exists so the user can see
-//        at a glance that protection is active, jump to the Home app,
-//        or quit. Not required for interception itself to work - each
-//        locked file double-click spawns its own short-lived instance
-//        of this exe per mode (1) above.
-
-#![windows_subsystem = "windows"] // no console window
+#![windows_subsystem = "windows"]
 
 mod dialog;
 mod tray;
 
-use std::path::PathBuf;
-use standard_lock_core::Config;
+use std::env;
+use std::process::Command;
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let args: Vec<String> = env::args().collect();
 
-    if args.len() >= 2 {
-        handle_file_open(PathBuf::from(&args[1]));
-    } else {
-        tray::run();
-    }
-}
+    // If executed with arguments, treat the first arg as a file path to prompt password for
+    if args.len() > 1 {
+        let target_file = &args[1];
+        let cfg = standard_lock_core::Config::load().unwrap_or_default();
 
-fn handle_file_open(file: PathBuf) {
-    let cfg = match Config::load() {
-        Ok(c) => c,
-        Err(_) => return, // can't read config, fail closed (deny)
-    };
+        if cfg.password_hash.is_empty() {
+            let _ = Command::new("cmd")
+                .args(["/C", "start", "", target_file])
+                .spawn();
+            return;
+        }
 
-    if !cfg.is_locked(&file) {
-        // Not actually flagged for locking (e.g. in the exceptions list).
-        // Let it straight through to its original app.
-        let ext = file
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or_default();
-        let _ = standard_lock_core::open_with_original_handler(ext, &file, &cfg);
+        if let Some(password) = dialog::prompt_password() {
+            if standard_lock_core::verify_password(&password, &cfg.password_hash) {
+                let _ = Command::new("cmd")
+                    .args(["/C", "start", "", target_file])
+                    .spawn();
+            } else {
+                unsafe {
+                    use windows::core::w;
+                    use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
+                    MessageBoxW(
+                        None,
+                        w!("Incorrect password. Access denied."),
+                        w!("Standard Lock"),
+                        MB_OK | MB_ICONERROR,
+                    );
+                }
+            }
+        }
         return;
     }
 
-    if cfg.password_hash.is_empty() {
-        dialog::show_message(
-            "Standard Lock",
-            "No password has been set yet. Open \"Standard Lock - Home\" to set one up before locking files.",
-        );
-        return; // deny by default
-    }
-
-    let ext = file
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or_default()
-        .to_string();
-
-    let file_name = file
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| "this file".to_string());
-
-    if dialog::prompt_password(&file_name, &cfg.password_hash) {
-        let _ = standard_lock_core::open_with_original_handler(&ext, &file, &cfg);
-    }
-    // else: user cancelled or failed too many attempts -> do nothing (deny).
+    // Otherwise, start tray icon process
+    tray::run();
 }

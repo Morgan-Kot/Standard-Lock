@@ -6,10 +6,19 @@ members = [
     "home-app",
 ]
 
-# Shared release profile: small binaries, fast startup, low memory.
 [profile.release]
-opt-level = "z"     # optimize for size (helps load time + the 100MB/app budget)
-lto = true          # link-time optimization, strips dead code across crates
-codegen-units = 1   # better optimization at the cost of compile time
-panic = "abort"     # smaller binary, no unwinding machinery
-strip = true        # strip symbols from the final binary
+opt-level = "z" 
+lto = true 
+codegen-units = 1  
+panic = "abort" 
+strip = true        
+
+[dependencies]
+standard-lock-core = { path = "../core" }
+windows = { version = "0.58.0", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_Graphics_Gdi",
+] }
+rfd = "0.14"

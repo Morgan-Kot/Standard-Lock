@@ -1,17 +1,7 @@
-[workspace]
-resolver = "2"
-members = [
-    "core",
-    "lock-app",
-    "home-app",
-]
-
-[profile.release]
-opt-level = "z" 
-lto = true 
-codegen-units = 1  
-panic = "abort" 
-strip = true        
+[package]
+name = "standard-lock-home"
+version = "0.1.0"
+edition = "2021"
 
 [dependencies]
 standard-lock-core = { path = "../core" }

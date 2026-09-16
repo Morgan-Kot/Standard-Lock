@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = [
+    "core",
+    "lock-app",
+    "home-app",
+]
+
+# Shared release profile: small binaries, fast startup, low memory.
+[profile.release]
+opt-level = "z"     # optimize for size (helps load time + the 100MB/app budget)
+lto = true          # link-time optimization, strips dead code across crates
+codegen-units = 1   # better optimization at the cost of compile time
+panic = "abort"     # smaller binary, no unwinding machinery
+strip = true        # strip symbols from the final binary

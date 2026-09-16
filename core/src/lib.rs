@@ -1,0 +1,392 @@
+//! standard_lock_core
+//!
+//! Shared logic used by both `lock-app` (the background interceptor / tray
+//! process) and `home-app` (the settings / management console).
+//!
+//! Responsibilities:
+//!   * `Config`  - load/save config.json, the single source of truth.
+//!   * password  - Argon2id hashing + verification (never store plaintext).
+//!   * registry  - register/unregister Windows file-type interception,
+//!                 with backup + restore of whatever handler was there
+//!                 before us.
+//!   * relaunch  - once a password is accepted, hand the file back to its
+//!                 original (pre-lock) application.
+
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+
+use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
+use argon2::Argon2;
+use rand_core::OsRng;
+use serde::{Deserialize, Serialize};
+
+pub const APP_NAME: &str = "Standard Lock";
+pub const MOTTO: &str = "Nothing opens without permission.";
+
+/// Extensions we intercept by default (without the leading dot).
+/// Deliberately does NOT include "exe" - Windows will not let a
+/// non-elevated, non-system handler safely intercept executables,
+/// and doing so is out of scope by design (see project notes).
+pub const DEFAULT_EXTENSIONS: &[&str] = &["txt", "png", "jpg", "jpeg", "gif", "pdf", "docx"];
+
+// ---------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Config {
+    /// Argon2id PHC hash string. Empty until the user sets a password
+    /// for the first time via Standard Lock - Home.
+    pub password_hash: String,
+
+    /// Extensions (no dot, lowercase) currently registered with Windows
+    /// to route through lock-app.exe.
+    pub locked_extensions: Vec<String>,
+
+    /// If true, every file under a locked extension requires a password
+    /// UNLESS it's listed in `exceptions`.
+    /// If false, ONLY files listed in `explicit_locked_paths` require one.
+    pub lock_all: bool,
+
+    /// Absolute file paths excluded from locking when `lock_all == true`.
+    pub exceptions: Vec<String>,
+
+    /// Absolute file paths that require a password when `lock_all == false`.
+    pub explicit_locked_paths: Vec<String>,
+
+    /// Backup of each extension's previous default ProgID, so we can
+    /// hand a file back to whatever normally opens it, and so we can
+    /// cleanly restore the original association if the extension is
+    /// unlocked. Keyed by extension (no dot, lowercase).
+    pub original_handlers: HashMap<String, String>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            password_hash: String::new(),
+            locked_extensions: DEFAULT_EXTENSIONS.iter().map(|s| s.to_string()).collect(),
+            lock_all: true,
+            exceptions: Vec::new(),
+            explicit_locked_paths: Vec::new(),
+            original_handlers: HashMap::new(),
+        }
+    }
+}
+
+impl Config {
+    /// Shared, all-users config location. We deliberately do NOT store
+    /// this next to either .exe: lock-app.exe and home-app.exe usually
+    /// live in separate folders, but both must agree on one password
+    /// and one file list, so a stable machine-wide path is used instead.
+    ///   C:\ProgramData\StandardLock\config.json
+    pub fn path() -> PathBuf {
+        let base = std::env::var_os("ProgramData")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"));
+        base.join("StandardLock").join("config.json")
+    }
+
+    pub fn load() -> std::io::Result<Config> {
+        let path = Self::path();
+        if !path.exists() {
+            let cfg = Config::default();
+            cfg.save()?;
+            return Ok(cfg);
+        }
+        let data = std::fs::read_to_string(&path)?;
+        let cfg: Config = serde_json::from_str(&data)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        Ok(cfg)
+    }
+
+    pub fn save(&self) -> std::io::Result<()> {
+        let path = Self::path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let data = serde_json::to_string_pretty(self)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        std::fs::write(&path, data)
+    }
+
+    /// Whether `file` should be gated behind a password right now.
+    pub fn is_locked(&self, file: &Path) -> bool {
+        let ext = file
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase())
+            .unwrap_or_default();
+
+        if !self.locked_extensions.iter().any(|e| *e == ext) {
+            return false; // this extension isn't even routed through us
+        }
+
+        let file_str = file.to_string_lossy().to_lowercase();
+
+        if self.lock_all {
+            !self
+                .exceptions
+                .iter()
+                .any(|p| p.to_lowercase() == file_str)
+        } else {
+            self.explicit_locked_paths
+                .iter()
+                .any(|p| p.to_lowercase() == file_str)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------
+// Password
+// ---------------------------------------------------------------------
+
+pub fn hash_password(plaintext: &str) -> Result<String, String> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    argon2
+        .hash_password(plaintext.as_bytes(), &salt)
+        .map(|h| h.to_string())
+        .map_err(|e| e.to_string())
+}
+
+pub fn verify_password(plaintext: &str, hash: &str) -> bool {
+    let parsed = match PasswordHash::new(hash) {
+        Ok(h) => h,
+        Err(_) => return false,
+    };
+    Argon2::default()
+        .verify_password(plaintext.as_bytes(), &parsed)
+        .is_ok()
+}
+
+// ---------------------------------------------------------------------
+// Registry: Windows file-type interception
+// ---------------------------------------------------------------------
+
+pub mod registry {
+    use super::*;
+    use winreg::enums::*;
+    use winreg::RegKey;
+
+    const OUR_PROGID: &str = "StandardLock.Locked";
+
+    /// Point extension `.ext` at lock-app.exe, backing up whatever
+    /// ProgID currently owns it so it can be restored later.
+    pub fn lock_extension(ext: &str, lock_exe: &Path, cfg: &mut Config) -> std::io::Result<()> {
+        let ext = ext.trim_start_matches('.').to_lowercase();
+        let classes_root = RegKey::predef(HKEY_CLASSES_ROOT);
+        let hkcu_classes = RegKey::predef(HKEY_CURRENT_USER).open_subkey_with_flags(
+            "Software\\Classes",
+            KEY_ALL_ACCESS,
+        );
+        let hkcu_classes = match hkcu_classes {
+            Ok(k) => k,
+            Err(_) => RegKey::predef(HKEY_CURRENT_USER)
+                .create_subkey("Software\\Classes")?
+                .0,
+        };
+
+        // 1. Back up the current default handler for this extension
+        //    (read from the merged CLASSES_ROOT view, which is what
+        //    Windows Explorer actually uses to pick a program).
+        let dotext = format!(".{ext}");
+        if let Ok(ext_key) = classes_root.open_subkey(&dotext) {
+            if let Ok(current_progid) = ext_key.get_value::<String, _>("") {
+                if current_progid != OUR_PROGID {
+                    cfg.original_handlers.insert(ext.clone(), current_progid);
+                }
+            }
+        }
+
+        // 2. Register our own ProgID with a command pointing at lock-app.exe.
+        let (progid_key, _) = hkcu_classes.create_subkey(OUR_PROGID)?;
+        let (shell_open_cmd, _) =
+            progid_key.create_subkey("shell\\open\\command")?;
+        let exe_str = lock_exe.to_string_lossy();
+        shell_open_cmd.set_value("", &format!("\"{exe_str}\" \"%1\""))?;
+
+        // 3. Point the extension at our ProgID (HKCU override wins over HKLM
+        //    in the merged view, and needs no admin rights).
+        let (ext_key, _) = hkcu_classes.create_subkey(&dotext)?;
+        ext_key.set_value("", &OUR_PROGID)?;
+
+        if !cfg.locked_extensions.iter().any(|e| e == &ext) {
+            cfg.locked_extensions.push(ext);
+        }
+        notify_shell_of_association_change();
+        Ok(())
+    }
+
+    /// Remove our interception for `.ext` and restore whatever handled
+    /// it before, if we have a backup.
+    pub fn unlock_extension(ext: &str, cfg: &mut Config) -> std::io::Result<()> {
+        let ext = ext.trim_start_matches('.').to_lowercase();
+        let hkcu_classes = RegKey::predef(HKEY_CURRENT_USER)
+            .open_subkey_with_flags("Software\\Classes", KEY_ALL_ACCESS)?;
+        let dotext = format!(".{ext}");
+
+        // Deleting our HKCU override lets the HKLM (machine-wide,
+        // original) registration show through again in the merged view.
+        let _ = hkcu_classes.delete_subkey_all(&dotext);
+
+        cfg.locked_extensions.retain(|e| e != &ext);
+        cfg.original_handlers.remove(&ext);
+        notify_shell_of_association_change();
+        Ok(())
+    }
+
+    /// Look up the shell "open" command template for a ProgID, e.g.
+    ///   "C:\Program Files\...\app.exe" "%1"
+    pub fn command_for_progid(progid: &str) -> Option<String> {
+        let classes_root = RegKey::predef(HKEY_CLASSES_ROOT);
+        classes_root
+            .open_subkey(format!("{progid}\\shell\\open\\command"))
+            .ok()
+            .and_then(|k| k.get_value::<String, _>("").ok())
+    }
+
+    /// Tell Explorer the file association table changed, so icons /
+    /// "open with" menus refresh without a logoff.
+    fn notify_shell_of_association_change() {
+        use windows::Win32::UI::Shell::{SHChangeNotify, SHCNE_ASSOCCHANGED, SHCNF_IDLIST};
+        unsafe {
+            SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, None, None);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------
+// Cross-app bookkeeping: lets the tray icon find "Standard Lock - Home"
+// even though the two exes ship in separate folders. Home records its
+// own location here the first time it runs; the tray reads it back.
+// ---------------------------------------------------------------------
+
+pub mod app_registry {
+    use super::*;
+    use winreg::enums::*;
+    use winreg::RegKey;
+
+    const KEY: &str = "Software\\StandardLock";
+
+    pub fn set_home_path(path: &Path) -> std::io::Result<()> {
+        let (key, _) = RegKey::predef(HKEY_CURRENT_USER).create_subkey(KEY)?;
+        key.set_value("HomePath", &path.to_string_lossy().to_string())
+    }
+
+    pub fn get_home_path() -> Option<PathBuf> {
+        RegKey::predef(HKEY_CURRENT_USER)
+            .open_subkey(KEY)
+            .ok()
+            .and_then(|k| k.get_value::<String, _>("HomePath").ok())
+            .map(PathBuf::from)
+    }
+
+    pub fn set_lock_exe_path(path: &Path) -> std::io::Result<()> {
+        let (key, _) = RegKey::predef(HKEY_CURRENT_USER).create_subkey(KEY)?;
+        key.set_value("LockExePath", &path.to_string_lossy().to_string())
+    }
+
+    pub fn get_lock_exe_path() -> Option<PathBuf> {
+        RegKey::predef(HKEY_CURRENT_USER)
+            .open_subkey(KEY)
+            .ok()
+            .and_then(|k| k.get_value::<String, _>("LockExePath").ok())
+            .map(PathBuf::from)
+    }
+}
+
+// ---------------------------------------------------------------------
+// Relaunching a file with its ORIGINAL (pre-lock) handler
+// ---------------------------------------------------------------------
+
+/// Substitutes "%1" in a shell command template with `file`, then runs
+/// it directly - bypassing the registry entirely, since the extension
+/// is currently still pointed at us.
+pub fn open_with_original_handler(ext: &str, file: &Path, cfg: &Config) -> std::io::Result<()> {
+    let ext = ext.trim_start_matches('.').to_lowercase();
+
+    if let Some(progid) = cfg.original_handlers.get(&ext) {
+        if let Some(template) = registry::command_for_progid(progid) {
+            let file_str = file.to_string_lossy();
+            let cmd = template.replace("%1", &file_str).replace("%L", &file_str);
+            if run_command_line(&cmd).is_ok() {
+                return Ok(());
+            }
+        }
+    }
+
+    // Fallback: this covers modern UWP-packaged default apps (e.g. the
+    // Windows Photos app) which don't expose a plain shell\open\command
+    // we can shell out to. We briefly release our interception, ask
+    // Windows to open the file the normal way, then re-lock a couple of
+    // seconds later. This is best-effort by nature of how UWP handlers
+    // work; for the most reliable experience, set a traditional desktop
+    // app (Notepad, IrfanView, a classic PDF reader, etc.) as the
+    // default for locked file types.
+    fallback_open_and_relock(&ext, file)
+}
+
+fn run_command_line(cmd: &str) -> std::io::Result<()> {
+    // `start`'s own options (like /B) must come before the window-title
+    // placeholder, which itself must come before the actual command.
+    std::process::Command::new("cmd")
+        .args(["/C", "start", "/B", "", cmd])
+        .spawn()
+        .map(|_| ())
+}
+
+fn fallback_open_and_relock(ext: &str, file: &Path) -> std::io::Result<()> {
+    use windows::core::PCWSTR;
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+    let mut cfg = Config::load()?;
+    let lock_exe = std::env::current_exe()?;
+    registry::unlock_extension(ext, &mut cfg)?;
+    cfg.save()?;
+
+    let wide_file: Vec<u16> = file
+        .as_os_str()
+        .encode_wide_ext()
+        .chain(std::iter::once(0))
+        .collect();
+    unsafe {
+        ShellExecuteW(
+            None,
+            PCWSTR::null(),
+            PCWSTR(wide_file.as_ptr()),
+            PCWSTR::null(),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
+        );
+    }
+
+    // Re-lock shortly after, on a detached thread, once the target app
+    // has had time to actually load the file.
+    let ext_owned = ext.to_string();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(3));
+        if let Ok(mut cfg) = Config::load() {
+            if let Ok(exe) = std::env::current_exe() {
+                let _ = registry::lock_extension(&ext_owned, &exe, &mut cfg);
+                let _ = cfg.save();
+            }
+        }
+    });
+    let _ = lock_exe; // silence unused warning in non-Windows checks
+    Ok(())
+}
+
+/// Small helper trait so the fallback path above doesn't need a direct
+/// `std::os::windows` import at the top of the file (keeps this file
+/// readable top-to-bottom).
+trait EncodeWideExt {
+    fn encode_wide_ext(&self) -> std::vec::IntoIter<u16>;
+}
+impl EncodeWideExt for std::ffi::OsStr {
+    fn encode_wide_ext(&self) -> std::vec::IntoIter<u16> {
+        use std::os::windows::ffi::OsStrExt;
+        self.encode_wide().collect::<Vec<u16>>().into_iter()
+    }
+}

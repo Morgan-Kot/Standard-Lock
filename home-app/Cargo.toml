@@ -1,0 +1,24 @@
+[package]
+name = "standard-lock-home"
+version = "0.1.0"
+edition = "2021"
+description = "Standard Lock - Home. Manage your password and which files are locked."
+
+[[bin]]
+name = "standard-lock-home"
+path = "src/main.rs"
+
+[dependencies]
+standard_lock_core = { path = "../core" }
+
+[dependencies.windows]
+version = "0.58"
+features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Controls",
+    "Win32_UI_Controls_Dialogs",
+    "Win32_UI_Shell",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+]

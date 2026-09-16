@@ -1,6 +1,5 @@
-//! Custom encryption/decryption logic matching the Python implementation.
+//! Custom encryption/decryption logic matching the specified algorithm.
 
-/// Encrypts input plain text string into underscore-separated 3-digit token string.
 pub fn hash_password(password: &str) -> Result<String, String> {
     let mut state: u32 = 17;
     let mut out: Vec<String> = Vec::new();
@@ -15,24 +14,22 @@ pub fn hash_password(password: &str) -> Result<String, String> {
     Ok(out.join("_"))
 }
 
-/// Decrypts the token string back into plain text and compares it against the input password.
-pub fn verify_password(entered: &str, stored_encrypted: &str) -> bool {
-    if stored_encrypted.is_empty() {
+pub fn verify_password(entered: &str, hash: &str) -> bool {
+    if hash.is_empty() {
         return false;
     }
 
     let mut state: u32 = 17;
     let mut bytes: Vec<u8> = Vec::new();
 
-    for (i, token) in stored_encrypted.split('_').enumerate() {
-        let x = match token.parse::<i32>() {
+    for (i, token) in hash.split('_').enumerate() {
+        let x = match token.parse::<u32>() {
             Ok(val) => val,
             Err(_) => return false,
         };
 
         let i_u32 = i as u32;
-        
-        let mut diff = x - (state as i32) - ((i_u32 * 7) as i32);
+        let mut diff = (x as i32) - (state as i32) - ((i_u32 * 7) as i32);
         diff = diff % 256;
         if diff < 0 {
             diff += 256;

@@ -1,2 +1,1 @@
-# Standard Lock
-"**Nothing opens without permission.**"
+### Encryption methods

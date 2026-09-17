@@ -2,11 +2,11 @@
 
 
 
-## Method 1
+### Method 1
 Lorem Ipsum...
 
-## Method 2
+### Method 2
 Lorem Ipsum...
 
-## Methods 3
+### Methods 3
 Lorem Ipsum...

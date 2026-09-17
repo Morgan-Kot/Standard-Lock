@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ecryption Center</title>
+
+  <script src="https://kit.fontawesome.com/3f1efd1059.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root{
+      --bg:#080909;
+      --surface:#171818;
+      --surface-2:#1e1f1f;
+      --surface-3:#242525;
+      --border:#2d2e2e;
+      --text:#f3f3f3;
+      --muted:#a6a6a6;
+      --accent:#1d5558;
+      --accent-hover:#276b6e;
+      --accent-soft:rgba(45,130,134,.14);
+      --danger:#a55b5b;
+      --shadow:0 18px 50px rgba(0,0,0,.25);
+      --radius:14px;
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(60,100,100,.08), transparent 35%),
+        var(--bg);
+      color:var(--text);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      line-height:1.55;
+    }
+
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+
+    .nav-wrap{
+      position:sticky;
+      top:16px;
+      z-index:20;
+      display:flex;
+      justify-content:center;
+      padding:16px 16px 0;
+    }
+
+    nav{
+      display:flex;
+      gap:4px;
+      padding:4px;
+      background:#292a2a;
+      border:1px solid #363737;
+      border-radius:18px;
+      box-shadow:0 8px 30px rgba(0,0,0,.28);
+      backdrop-filter:blur(14px);
+    }
+
+    nav button{
+      border:0;
+      color:#eee;
+      background:transparent;
+      padding:10px 16px;
+      border-radius:13px;
+      transition:.2s ease;
+    }
+
+    nav button:hover{background:#333434}
+    nav button.active{
+      background:#3a3b3b;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+
+    nav i{margin-right:8px;opacity:.85}
+
+    main{
+      width:min(1180px,calc(100% - 32px));
+      margin:0 auto;
+      padding:55px 0 80px;
+    }
+
+    .page{display:none;animation:fade .22s ease}
+    .page.active{display:block}
+
+    @keyframes fade{
+      from{opacity:0;transform:translateY(5px)}
+      to{opacity:1;transform:none}
+    }
+
+    .hero{text-align:center;margin:30px 0 42px}
+    .hero .eyebrow{
+      color:#8cb6b7;
+      font-size:.82rem;
+      font-weight:700;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      margin-bottom:8px;
+    }
+    h1{
+      font-size:clamp(2.5rem,7vw,4.6rem);
+      line-height:1;
+      margin:0 0 16px;
+      letter-spacing:-.055em;
+    }
+    .hero p{
+      max-width:700px;
+      margin:auto;
+      color:var(--muted);
+      font-size:1.08rem;
+    }
+
+    .grid{display:grid;gap:18px}
+    .grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+    .card{
+      background:var(--surface);
+      border:1px solid #202121;
+      border-radius:var(--radius);
+      padding:25px;
+      box-shadow:var(--shadow);
+    }
+
+    .card h2,.card h3{margin:0 0 10px}
+    .card h2{font-size:1.45rem}
+    .card h3{font-size:1.08rem}
+    .card p{color:#c3c3c3;margin:8px 0}
+    .muted{color:var(--muted)!important}
+
+    .icon-heading{
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    .icon-heading i{color:#8cb6b7;width:20px;text-align:center}
+
+    .feature{
+      padding:24px;
+      background:linear-gradient(145deg,#181919,#131414);
+    }
+    .feature i.big{
+      display:inline-grid;
+      place-items:center;
+      width:46px;height:46px;
+      background:var(--accent-soft);
+      color:#8cc1c2;
+      border-radius:12px;
+      margin-bottom:16px;
+    }
+
+    .steps{counter-reset:steps;display:grid;gap:13px}
+    .step{
+      display:flex;gap:14px;align-items:flex-start;
+      padding:15px;
+      background:#121313;
+      border-radius:11px;
+    }
+    .step::before{
+      counter-increment:steps;
+      content:counter(steps);
+      display:grid;place-items:center;
+      flex:0 0 30px;height:30px;
+      background:var(--accent);
+      border-radius:50%;
+      font-weight:800;
+    }
+
+    .btn{
+      border:0;
+      border-radius:11px;
+      padding:12px 16px;
+      color:white;
+      background:var(--accent);
+      transition:.2s ease;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:9px;
+      text-decoration:none;
+    }
+    .btn:hover{background:var(--accent-hover);transform:translateY(-1px)}
+    .btn.secondary{
+      background:#292a2a;
+      border:1px solid #383939;
+    }
+    .btn.secondary:hover{background:#333434}
+    .btn.small{padding:9px 12px;font-size:.9rem}
+    .btn.disabled{opacity:.45;pointer-events:none}
+
+    .download-hero{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+      flex-wrap:wrap;
+    }
+    .release-status{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color:var(--muted);
+      margin-top:8px;
+      font-size:.9rem;
+    }
+    .dot{
+      width:8px;height:8px;border-radius:50%;
+      background:#777;
+    }
+    .dot.live{background:#6fb2a2;box-shadow:0 0 12px rgba(111,178,162,.35)}
+
+    .methods-layout{
+      display:grid;
+      grid-template-columns:280px minmax(0,1fr);
+      gap:18px;
+      align-items:start;
+    }
+
+    .method-list{
+      position:sticky;
+      top:91px;
+      max-height:calc(100vh - 110px);
+      overflow:auto;
+      padding:10px;
+    }
+
+    .method-item{
+      width:100%;
+      text-align:left;
+      border:1px solid transparent;
+      background:transparent;
+      color:#ddd;
+      padding:13px 14px;
+      border-radius:10px;
+      margin-bottom:5px;
+    }
+    .method-item:hover{background:#222323}
+    .method-item.active{
+      background:#242626;
+      border-color:#353737;
+    }
+    .method-item .name{font-weight:700}
+    .method-item .desc{
+      display:block;
+      color:#8e8e8e;
+      font-size:.78rem;
+      margin-top:3px;
+    }
+
+    .method-title{
+      display:flex;
+      justify-content:space-between;
+      gap:15px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 9px;
+      border-radius:999px;
+      background:var(--accent-soft);
+      color:#9bc7c8;
+      font-size:.75rem;
+      font-weight:700;
+    }
+
+    .code-wrap{
+      position:relative;
+      margin-top:16px;
+    }
+    pre{
+      margin:0;
+      padding:18px;
+      overflow:auto;
+      border-radius:11px;
+      background:#0d0e0e;
+      border:1px solid #242626;
+      color:#d8d8d8;
+      font:13px/1.6 "SFMono-Regular",Consolas,"Liberation Mono",monospace;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .copy-btn{
+      position:absolute;
+      top:9px;right:9px;
+      border:1px solid #343636;
+      background:#202222;
+      color:#bbb;
+      border-radius:8px;
+      padding:6px 9px;
+      font-size:.78rem;
+    }
+
+    .formula{
+      padding:17px;
+      background:#101111;
+      border:1px solid #252727;
+      border-radius:11px;
+      font-family:"SFMono-Regular",Consolas,monospace;
+      color:#d7dddd;
+      overflow:auto;
+    }
+
+    .playground{
+      background:linear-gradient(145deg,#151717,#101111);
+    }
+    .play-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .segmented{
+      display:flex;
+      padding:3px;
+      background:#0d0e0e;
+      border:1px solid #292b2b;
+      border-radius:10px;
+    }
+    .segmented button{
+      border:0;
+      color:#999;
+      background:transparent;
+      padding:8px 12px;
+      border-radius:8px;
+    }
+    .segmented button.active{
+      color:#fff;
+      background:#292b2b;
+    }
+
+    label{
+      display:block;
+      font-size:.82rem;
+      font-weight:700;
+      color:#bbb;
+      margin:16px 0 7px;
+    }
+
+    textarea{
+      width:100%;
+      min-height:120px;
+      resize:vertical;
+      border:1px solid #2a2c2c;
+      outline:0;
+      border-radius:10px;
+      padding:14px;
+      background:#0b0c0c;
+      color:white;
+    }
+    textarea:focus{border-color:#416d6e;box-shadow:0 0 0 3px rgba(65,109,110,.13)}
+
+    .char-row{
+      display:flex;
+      justify-content:space-between;
+      color:#777;
+      font-size:.76rem;
+      margin-top:6px;
+    }
+
+    .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+
+    .method-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:18px;
+    }
+
+    .notice{
+      padding:13px 15px;
+      background:#131515;
+      border:1px solid #282a2a;
+      border-left:3px solid #527e80;
+      border-radius:9px;
+      color:#bdbdbd;
+    }
+
+    .changelog-entry{
+      padding:20px 0;
+      border-bottom:1px solid #282929;
+    }
+    .changelog-entry:last-child{border-bottom:0}
+    .version{
+      display:flex;align-items:center;gap:10px;
+      margin-bottom:7px;
+    }
+    .version strong{font-size:1.1rem}
+    .version span{color:#777;font-size:.82rem}
+
+    footer{
+      text-align:center;
+      color:#666;
+      padding:0 0 50px;
+      font-size:.82rem;
+    }
+    footer a{color:#888}
+
+    @media(max-width:850px){
+      .grid.two,.grid.three{grid-template-columns:1fr}
+      .methods-layout{grid-template-columns:1fr}
+      .method-list{
+        position:static;
+        max-height:none;
+        display:flex;
+        overflow:auto;
+        gap:7px;
+        padding:0;
+      }
+      .method-item{
+        min-width:210px;
+        margin:0;
+      }
+    }
+
+    @media(max-width:620px){
+      main{width:min(100% - 20px,1180px);padding-top:35px}
+      .nav-wrap{top:8px;padding:8px 8px 0}
+      nav{width:100%;overflow:auto;justify-content:flex-start}
+      nav button{white-space:nowrap;padding:9px 12px;font-size:.86rem}
+      nav i{margin-right:5px}
+      .card{padding:18px}
+      .hero{margin-top:22px}
+      .hero p{font-size:1rem}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="nav-wrap">
+    <nav aria-label="Primary navigation">
+      <button class="active" data-page="home"><i class="fa-solid fa-house"></i>Home</button>
+      <button data-page="download"><i class="fa-solid fa-download"></i>Download</button>
+      <button data-page="methods"><i class="fa-solid fa-lock"></i>Encryption Methods</button>
+      <button data-page="changelog"><i class="fa-solid fa-clock-rotate-left"></i>Changelog</button>
+    </nav>
+  </div>
+
+  <main>
+    <!-- HOME -->
+    <section id="home" class="page active">
+      <div class="hero">
+        <div class="eyebrow">Open • Customizable • Experimental</div>
+        <h1>Standard-Lock</h1>
+        <p>A small encryption project for people who want to experiment with, create, and share their own encryption methods.</p>
+      </div>
+
+      <div class="grid two">
+        <article class="card">
+          <div class="icon-heading">
+            <i class="fa-solid fa-circle-info"></i>
+            <h2>About the project</h2>
+          </div>
+          <p>Standard-Lock isn't intended to replace established cryptography. The project is designed for lightweight personal use, experimentation, and learning how encryption algorithms can be built and modified.</p>
+          <p class="muted">The architecture is intentionally simple: encryption and decryption methods can be added, edited, or removed without rebuilding the whole concept around a single fixed cipher.</p>
+        </article>
+
+        <article class="card">
+          <div class="icon-heading">
+            <i class="fa-brands fa-python"></i>
+            <h2>How it's made</h2>
+          </div>
+          <p>The project is written in Python, with individual methods kept in their own folders. This makes it easy to experiment with a method without changing unrelated methods.</p>
+          <p class="muted">This website provides browser-friendly JavaScript equivalents for methods that have a <strong>Try it!</strong> demo.</p>
+        </article>
+      </div>
+
+      <div style="height:18px"></div>
+
+      <article class="card">
+        <div class="icon-heading">
+          <i class="fa-solid fa-terminal"></i>
+          <h2>Getting started</h2>
+        </div>
+        <div class="steps">
+          <div class="step"><div><strong>Get the project</strong><br><span class="muted">Clone the repository or download the latest available release.</span></div></div>
+          <div class="step"><div><strong>Choose a method</strong><br><span class="muted">Browse the method folders and inspect their encryption/decryption implementation.</span></div></div>
+          <div class="step"><div><strong>Experiment</strong><br><span class="muted">Modify an existing method or create your own implementation.</span></div></div>
+          <div class="step"><div><strong>Share it</strong><br><span class="muted">Keep your method documented so other people can understand and experiment with it.</span></div></div>
+        </div>
+      </article>
+
+      <div style="height:18px"></div>
+
+      <div class="grid three">
+        <article class="card feature">
+          <i class="fa-solid fa-code big"></i>
+          <h3>Readable code</h3>
+          <p>Methods are small and easy to inspect rather than hidden behind a large framework.</p>
+        </article>
+        <article class="card feature">
+          <i class="fa-solid fa-flask big"></i>
+          <h3>Experiment freely</h3>
+          <p>Build unusual algorithms, test ideas, and compare different approaches.</p>
+        </article>
+        <article class="card feature">
+          <i class="fa-solid fa-people-group big"></i>
+          <h3>Community methods</h3>
+          <p>Methods can be documented and shared as independent pieces of the project.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD -->
+    <section id="download" class="page">
+      <div class="hero">
+        <div class="eyebrow">Encryption branch</div>
+        <h1>Downloads</h1>
+        <p>Get the latest release associated with the <code>Encryption</code> branch, or browse the individual method files directly.</p>
+      </div>
+
+      <article class="card">
+        <div class="download-hero">
+          <div>
+            <h2 style="margin-bottom:5px"><i class="fa-solid fa-box-open"></i> Latest Encryption release</h2>
+            <div id="releaseName" style="font-size:1.15rem;font-weight:700">Checking GitHub…</div>
+            <div class="release-status"><span id="releaseDot" class="dot"></span><span id="releaseStatus">Looking for a release targeting the Encryption branch.</span></div>
+          </div>
+          <div class="actions">
+            <a id="releaseDownload" class="btn disabled" href="#" target="_blank" rel="noopener">
+              <i class="fa-solid fa-download"></i> Download release
+            </a>
+            <a class="btn secondary" href="https://github.com/Morgan-Kot/Standard-Lock/releases" target="_blank" rel="noopener">
+              <i class="fa-brands fa-github"></i> All releases
+            </a>
+          </div>
+        </div>
+      </article>
+
+      <div style="height:18px"></div>
+
+      <article class="card">
+        <div class="icon-heading">
+          <i class="fa-solid fa-code-branch"></i>
+          <h2>Encryption branch</h2>
+        </div>
+        <p>The method files below are linked directly to the <code>Encryption</code> branch, so they stay close to the source implementation.</p>
+        <div class="actions">
+          <a class="btn secondary" href="https://github.com/Morgan-Kot/Standard-Lock/tree/Encryption" target="_blank" rel="noopener">
+            <i class="fa-brands fa-github"></i> Open Encryption branch
+          </a>
+        </div>
+      </article>
+
+      <div style="height:18px"></div>
+      <div class="grid three" id="downloadMethods"></div>
+    </section>
+
+    <!-- METHODS -->
+    <section id="methods" class="page">
+      <div class="hero">
+        <div class="eyebrow">Browse the collection</div>
+        <h1>Encryption Methods</h1>
+        <p>Read how each method works, inspect source snippets, view formulas, and try browser implementations where available.</p>
+      </div>
+
+      <div class="methods-layout">
+        <aside class="card method-list" id="methodList"></aside>
+        <div id="methodDetail"></div>
+      </div>
+    </section>
+
+    <!-- CHANGELOG -->
+    <section id="changelog" class="page">
+      <div class="hero">
+        <div class="eyebrow">Project history</div>
+        <h1>Changelog</h1>
+        <p>A simple timeline of notable project changes.</p>
+      </div>
+
+      <article class="card">
+        <div class="changelog-entry">
+          <div class="version"><strong>Current</strong><span>Encryption branch</span></div>
+          <p>Encryption methods are being developed as separate, inspectable implementations, including STWE01 and Caesar.</p>
+        </div>
+        <div class="changelog-entry">
+          <div class="version"><strong>Method 3</strong><span>Current branch implementation</span></div>
+          <p>Introduced a cipher registry containing STWE01 (Stewie) and a classic Caesar Shift +3 implementation.</p>
+        </div>
+        <div class="changelog-entry">
+          <div class="version"><strong>Method 2</strong><span>Earlier implementation</span></div>
+          <p>Added an autokey-style feedback implementation with a 16-bit internal state and four generated tokens per input byte.</p>
+        </div>
+        <div class="changelog-entry">
+          <div class="version"><strong>Method 1</strong><span>Earlier implementation</span></div>
+          <p>Introduced the initial state-feedback token encryption/decryption approach.</p>
+        </div>
+        <div class="notice" style="margin-top:18px">
+          <i class="fa-solid fa-circle-info"></i>
+          This page is intentionally lightweight and can be replaced with a repository-backed changelog later if you decide to maintain one.
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    Standard-Lock • Experimental encryption project •
+    <a href="https://github.com/Morgan-Kot/Standard-Lock/tree/Encryption" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+
+<script>
+  const GITHUB_API = "https://api.github.com/repos/Morgan-Kot/Standard-Lock/releases";
+  const BRANCH = "Encryption";
+  const REPO = "Morgan-Kot/Standard-Lock";
+
+  const methods = [
+    {
+      id:"method1",
+      name:"Method 1",
+      short:"State-feedback token cipher",
+      description:"The original compact state-feedback implementation.",
+      formula:[
+        "state₀ = 17",
+        "xᵢ = (bᵢ + stateᵢ + 7i) mod 256",
+        "stateᵢ₊₁ = (31·stateᵢ + bᵢ + i) mod 256"
+      ],
+      encrypt:`while True:
+    text = input("Text to encrypt (q to quit): ")
+    if text == "q":
+        break
+
+    state = 17
+    out = []
+
+    for i, b in enumerate(text.encode()):
+        x = (b + state + i * 7) % 256
+        out.append(f"{x:03}")
+        state = (state * 31 + b + i) % 256
+
+    print("Encrypted:", "_".join(out))`,
+      decrypt:`while True:
+    text = input("Text to decrypt (q to quit): ")
+    if text == "q":
+        break
+
+    state = 17
+    out = bytearray()
+
+    for i, token in enumerate(text.split("_")):
+        x = int(token)
+        b = (x - state - i * 7) % 256
+        out.append(b)
+        state = (state * 31 + b + i) % 256
+
+    print("Decrypted:", out.decode())`,
+      files:[
+        ["encrypt.py","Method_1/encrypt.py"],
+        ["decrypt.py","Method_1/decrypt.py"]
+      ],
+      tryIt:true,
+      encryptJS(text){
+        const bytes = new TextEncoder().encode(text);
+        let state = 17, out = [];
+        bytes.forEach((b,i)=>{
+          const x=(b+state+i*7)%256;
+          out.push(String(x).padStart(3,"0"));
+          state=(state*31+b+i)%256;
+        });
+        return out.join("_");
+      },
+      decryptJS(cipher){
+        const tokens=cipher.trim().split("_").filter(Boolean);
+        let state=17, bytes=[];
+        for(let i=0;i<tokens.length;i++){
+          const x=Number(tokens[i]);
+          if(!Number.isInteger(x) || x<0 || x>255) throw new Error("Invalid token: "+tokens[i]);
+          const b=(x-state-i*7+256*2)%256;
+          bytes.push(b);
+          state=(state*31+b+i)%256;
+        }
+        return new TextDecoder().decode(new Uint8Array(bytes));
+      }
+    },
+
+    {
+      id:"method2",
+      name:"Method 2",
+      short:"Four-token feedback cipher",
+      description:"A 16-bit-state implementation that emits four encrypted tokens per input byte.",
+      formula:[
+        "state₀ = 0x8F3C",
+        "k₁ = (state + 13i) mod 256",
+        "k₂ = (7·state + 31i) mod 256",
+        "k₃ = state XOR (101i)",
+        "k₄ = (state >> 3 + 17i) mod 256",
+        "t₁ = (b + k₁) mod 256",
+        "t₂ = b XOR k₂",
+        "t₃ = (b + k₃ + i) mod 256",
+        "t₄ = b XOR k₄ XOR 3i",
+        "stateᵢ₊₁ = (251·stateᵢ + bᵢ + 9i) mod 65536"
+      ],
+      encrypt:`def encrypt(plaintext: str) -> str:
+    data = plaintext.encode('utf-8')
+    state = 0x8F3C
+    tokens = []
+
+    for i, byte in enumerate(data):
+        k1 = (state + i * 13) % 256
+        k2 = (state * 7 + i * 31) % 256
+        k3 = (state ^ (i * 101)) % 256
+        k4 = ((state >> 3) + i * 17) % 256
+
+        t1 = (byte + k1) % 256
+        t2 = (byte ^ k2) % 256
+        t3 = (byte + k3 + i) % 256
+        t4 = (byte ^ k4 ^ (i * 3)) % 256
+
+        tokens.extend([f"{t1:03d}", f"{t2:03d}",
+                        f"{t3:03d}", f"{t4:03d}"])
+
+        state = (state * 251 + byte + i * 9) % 65536
+
+    return "_".join(tokens)`,
+      decrypt:`def decrypt(ciphertext: str) -> str:
+    tokens = [int(t) for t in ciphertext.strip().split("_") if t]
+    if len(tokens) % 4 != 0:
+        raise ValueError("Invalid ciphertext length.")
+
+    state = 0x8F3C
+    out_bytes = bytearray()
+
+    for i in range(0, len(tokens), 4):
+        idx = i // 4
+        t1, t2, t3, t4 = tokens[i:i+4]
+
+        k1 = (state + idx * 13) % 256
+        b1 = (t1 - k1) % 256
+        out_bytes.append(b1)
+
+        state = (state * 251 + b1 + idx * 9) % 65536
+
+    return out_bytes.decode('utf-8', errors='replace')`,
+      files:[
+        ["Explaination.md","Method_2/Explaination.md"],
+        ["encrypt.py","Method_2/encrypt.py"],
+        ["decrypt.py","Method_2/decrypt.py"]
+      ],
+      tryIt:true,
+      encryptJS(text){
+        const data=new TextEncoder().encode(text);
+        let state=0x8F3C, tokens=[];
+        data.forEach((byte,i)=>{
+          const k1=(state+i*13)%256;
+          const k2=(state*7+i*31)%256;
+          const k3=(state^(i*101))%256;
+          const k4=((state>>3)+i*17)%256;
+          const t1=(byte+k1)%256;
+          const t2=(byte^k2)%256;
+          const t3=(byte+k3+i)%256;
+          const t4=(byte^k4^(i*3))%256;
+          [t1,t2,t3,t4].forEach(v=>tokens.push(String(v).padStart(3,"0")));
+          state=(state*251+byte+i*9)%65536;
+        });
+        return tokens.join("_");
+      },
+      decryptJS(cipher){
+        const tokens=cipher.trim().split("_").filter(Boolean).map(Number);
+        if(tokens.some(n=>!Number.isInteger(n)||n<0||n>255)) throw new Error("Ciphertext contains an invalid token.");
+        if(tokens.length%4!==0) throw new Error("Invalid ciphertext length. Method 2 expects groups of four tokens.");
+        let state=0x8F3C, bytes=[];
+        for(let i=0;i<tokens.length;i+=4){
+          const idx=i/4;
+          const k1=(state+idx*13)%256;
+          const b=(tokens[i]-k1+256)%256;
+          bytes.push(b);
+          state=(state*251+b+idx*9)%65536;
+        }
+        return new TextDecoder().decode(new Uint8Array(bytes));
+      }
+    },
+
+    {
+      id:"method3",
+      name:"Method 3",
+      short:"Cipher registry",
+      description:"A registry containing STWE01 (Stewie) and Caesar Shift +3.",
+      formula:[
+        "STWE01: tokenized feedback state encryption",
+        "Caesar: E(c) = (ord(c) + 3) mod 1114112",
+        "Caesar: D(c) = (ord(c) - 3) mod 1114112"
+      ],
+      encrypt:`class STWE01Cipher(BaseCipher):
+    name = "STWE01 (Stewie)"
+    desc = "Standard Two way Encryption No.1"
+
+    @staticmethod
+    def encrypt(plaintext: str) -> str:
+        data = plaintext.encode('utf-8')
+        state = 0x8F3C
+        tokens = []
+
+        for i, byte in enumerate(data):
+            k1 = (state + i * 13) % 256
+            k2 = (state * 7 + i * 31) % 256
+            k3 = (state ^ (i * 101)) % 256
+            k4 = ((state >> 3) + i * 17) % 256
+
+            t1 = (byte + k1) % 256
+            t2 = (byte ^ k2) % 256
+            t3 = (byte + k3 + i) % 256
+            t4 = (byte ^ k4 ^ (i * 3)) % 256
+
+            tokens.extend([f"{t1:03d}", f"{t2:03d}",
+                            f"{t3:03d}", f"{t4:03d}"])
+            state = (state * 251 + byte + i * 9) % 65536`,
+      decrypt:`@staticmethod
+def decrypt(ciphertext: str) -> str:
+    tokens = [int(t) for t in ciphertext.strip().split("_") if t]
+    if len(tokens) % 4 != 0:
+        raise ValueError("Invalid ciphertext structure.")
+
+    state = 0x8F3C
+    out_bytes = bytearray()
+
+    for i in range(0, len(tokens), 4):
+        idx = i // 4
+        t1 = tokens[i]
+        k1 = (state + idx * 13) % 256
+        b1 = (t1 - k1) % 256
+
+        out_bytes.append(b1)
+        state = (state * 251 + b1 + idx * 9) % 65536
+
+    return out_bytes.decode('utf-8', errors='replace')`,
+      files:[
+        ["ciphers.py","Method_3/ciphers.py"],
+        ["main.py","Method_3/main.py"]
+      ],
+      tryIt:true,
+      encryptJS(text){
+        const data=new TextEncoder().encode(text);
+        let state=0x8F3C,tokens=[];
+        data.forEach((byte,i)=>{
+          const k1=(state+i*13)%256,k2=(state*7+i*31)%256;
+          const k3=(state^(i*101))%256,k4=((state>>3)+i*17)%256;
+          [ (byte+k1)%256, (byte^k2)%256, (byte+k3+i)%256, (byte^k4^(i*3))%256 ]
+            .forEach(v=>tokens.push(String(v).padStart(3,"0")));
+          state=(state*251+byte+i*9)%65536;
+        });
+        return tokens.join("_");
+      },
+      decryptJS(cipher){
+        const tokens=cipher.trim().split("_").filter(Boolean).map(Number);
+        if(tokens.some(n=>!Number.isInteger(n)||n<0||n>255)) throw new Error("Ciphertext contains an invalid token.");
+        if(tokens.length%4!==0) throw new Error("Invalid ciphertext structure.");
+        let state=0x8F3C,bytes=[];
+        for(let i=0;i<tokens.length;i+=4){
+          const idx=i/4,k1=(state+idx*13)%256,b=(tokens[i]-k1+256)%256;
+          bytes.push(b);
+          state=(state*251+b+idx*9)%65536;
+        }
+        return new TextDecoder().decode(new Uint8Array(bytes));
+      }
+    },
+
+    {
+      id:"caesar",
+      name:"Caesar (Shift +3)",
+      short:"Classic character shift",
+      description:"A simple Caesar cipher that shifts each Unicode code point by three positions.",
+      formula:[
+        "E(c) = chr((ord(c) + 3) mod 1114112)",
+        "D(c) = chr((ord(c) - 3) mod 1114112)"
+      ],
+      encrypt:`class CaesarCipher(BaseCipher):
+    name = "Caesar (Shift +3)"
+
+    @staticmethod
+    def encrypt(plaintext: str) -> str:
+        res = []
+        for char in plaintext:
+            res.append(chr((ord(char) + 3) % 1114112))
+        return "".join(res)`,
+      decrypt:`@staticmethod
+def decrypt(ciphertext: str) -> str:
+    res = []
+    for char in ciphertext:
+        res.append(chr((ord(char) - 3) % 1114112))
+    return "".join(res)`,
+      files:[
+        ["ciphers.py","Method_3/ciphers.py"]
+      ],
+      tryIt:true,
+      encryptJS(text){
+        return Array.from(text).map(ch=>String.fromCodePoint((ch.codePointAt(0)+3)%0x110000)).join("");
+      },
+      decryptJS(text){
+        return Array.from(text).map(ch=>String.fromCodePoint((ch.codePointAt(0)-3+0x110000)%0x110000)).join("");
+      }
+    }
+  ];
+
+  const navButtons=[...document.querySelectorAll("nav button")];
+  const pages=[...document.querySelectorAll(".page")];
+
+  navButtons.forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      navButtons.forEach(b=>b.classList.toggle("active",b===btn));
+      pages.forEach(p=>p.classList.toggle("active",p.id===btn.dataset.page));
+      window.scrollTo({top:0,behavior:"smooth"});
+    });
+  });
+
+  function escapeHTML(value){
+    return String(value).replace(/[&<>"']/g,c=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[c]));
+  }
+
+  function copyText(text,button){
+    navigator.clipboard?.writeText(text).then(()=>{
+      const old=button.innerHTML;
+      button.innerHTML='<i class="fa-solid fa-check"></i> Copied';
+      setTimeout(()=>button.innerHTML=old,1200);
+    }).catch(()=>{});
+  }
+
+  function renderMethods(){
+    const list=document.getElementById("methodList");
+    list.innerHTML=methods.map((m,i)=>`
+      <button class="method-item ${i===0?"active":""}" data-method="${m.id}">
+        <span class="name">${escapeHTML(m.name)}</span>
+        <span class="desc">${escapeHTML(m.short)}</span>
+      </button>
+    `).join("");
+
+    list.querySelectorAll(".method-item").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        list.querySelectorAll(".method-item").forEach(b=>b.classList.toggle("active",b===btn));
+        renderMethod(btn.dataset.method);
+      });
+    });
+
+    renderMethod(methods[0].id);
+  }
+
+  function renderMethod(id){
+    const m=methods.find(x=>x.id===id);
+    const detail=document.getElementById("methodDetail");
+
+    detail.innerHTML=`
+      <article class="card">
+        <div class="method-title">
+          <div>
+            <div class="badge"><i class="fa-solid fa-shield-halved"></i> ${escapeHTML(m.id.toUpperCase())}</div>
+            <h2 style="font-size:2rem;margin:12px 0 3px">${escapeHTML(m.name)}</h2>
+            <p class="muted">${escapeHTML(m.description)}</p>
+          </div>
+          <span class="badge"><i class="fa-solid fa-code"></i> Python source</span>
+        </div>
+
+        <div style="height:15px"></div>
+
+        <div class="notice">
+          <strong>About</strong><br>
+          This is an experimental/custom encryption method. Read the source and documentation before relying on it for anything security-sensitive.
+        </div>
+
+        <h3 style="margin-top:25px"><i class="fa-solid fa-square-root-variable"></i> Formula / algorithm</h3>
+        <div class="formula">${m.formula.map(f=>escapeHTML(f)).join("<br>")}</div>
+
+        <h3 style="margin-top:25px"><i class="fa-solid fa-lock"></i> Encryption code</h3>
+        <div class="code-wrap">
+          <button class="copy-btn"><i class="fa-regular fa-copy"></i> Copy</button>
+          <pre>${escapeHTML(m.encrypt)}</pre>
+        </div>
+
+        <h3 style="margin-top:25px"><i class="fa-solid fa-lock-open"></i> Decryption code</h3>
+        <div class="code-wrap">
+          <button class="copy-btn"><i class="fa-regular fa-copy"></i> Copy</button>
+          <pre>${escapeHTML(m.decrypt)}</pre>
+        </div>
+
+        <h3 style="margin-top:25px"><i class="fa-solid fa-download"></i> Direct files</h3>
+        <div class="method-actions">
+          ${m.files.map(([label,path])=>`
+            <a class="btn secondary small" href="https://github.com/${REPO}/blob/${BRANCH}/${path}" target="_blank" rel="noopener">
+              <i class="fa-solid fa-file-code"></i> ${escapeHTML(label)}
+            </a>
+          `).join("")}
+        </div>
+
+        ${m.tryIt ? `
+          <div class="card playground" style="margin-top:28px">
+            <div class="play-head">
+              <div>
+                <h3 style="margin:0">Try it!</h3>
+                <p class="muted" style="margin:3px 0 0">Runs locally in your browser using a JavaScript equivalent.</p>
+              </div>
+              <div class="segmented">
+                <button class="active" data-mode="encrypt">Encrypt</button>
+                <button data-mode="decrypt">Decrypt</button>
+              </div>
+            </div>
+
+            <label class="tool-label">Input</label>
+            <textarea class="tool-input" placeholder="Enter up to 10 characters…"></textarea>
+            <div class="char-row"><span class="limit-label">Maximum 10 characters</span><span class="counter">0 / 10</span></div>
+
+            <div class="actions">
+              <button class="btn run-btn"><i class="fa-solid fa-play"></i> <span>Encrypt</span></button>
+              <button class="btn secondary clear-btn"><i class="fa-solid fa-xmark"></i> Clear</button>
+            </div>
+
+            <label>Output</label>
+            <textarea class="tool-output" readonly placeholder="Result will appear here…"></textarea>
+            <div class="tool-error" style="display:none;color:#d39a9a;margin-top:8px;font-size:.85rem"></div>
+          </div>
+        `:""}
+      </article>
+    `;
+
+    detail.querySelectorAll(".copy-btn").forEach((btn,index)=>{
+      const source=index===0?m.encrypt:m.decrypt;
+      btn.addEventListener("click",()=>copyText(source,btn));
+    });
+
+    if(m.tryIt) setupPlayground(detail,m);
+  }
+
+  function setupPlayground(root,m){
+    let mode="encrypt";
+    const input=root.querySelector(".tool-input");
+    const output=root.querySelector(".tool-output");
+    const run=root.querySelector(".run-btn");
+    const clear=root.querySelector(".clear-btn");
+    const counter=root.querySelector(".counter");
+    const limit=root.querySelector(".limit-label");
+    const error=root.querySelector(".tool-error");
+    const modeButtons=root.querySelectorAll(".segmented button");
+
+    function updateUI(){
+      const encrypt=mode==="encrypt";
+      modeButtons.forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
+      run.querySelector("span").textContent=encrypt?"Encrypt":"Decrypt";
+      run.querySelector("i").className=encrypt?"fa-solid fa-lock":"fa-solid fa-lock-open";
+      input.placeholder=encrypt?"Enter up to 10 characters…":"Paste ciphertext to decrypt…";
+      limit.textContent=encrypt?"Maximum 10 characters":"No 10-character limit for ciphertext";
+      input.maxLength=encrypt?10:100000;
+      counter.textContent=encrypt?`${[...input.value].length} / 10`:"";
+    }
+
+    modeButtons.forEach(btn=>btn.addEventListener("click",()=>{
+      mode=btn.dataset.mode;
+      input.value="";
+      output.value="";
+      error.style.display="none";
+      updateUI();
+    }));
+
+    input.addEventListener("input",()=>{
+      if(mode==="encrypt"){
+        const chars=[...input.value];
+        if(chars.length>10) input.value=chars.slice(0,10).join("");
+        counter.textContent=`${[...input.value].length} / 10`;
+      }
+    });
+
+    run.addEventListener("click",()=>{
+      error.style.display="none";
+      try{
+        if(!input.value){
+          output.value="";
+          return;
+        }
+        output.value=mode==="encrypt"?m.encryptJS(input.value):m.decryptJS(input.value);
+      }catch(e){
+        output.value="";
+        error.textContent=e?.message||"Unable to process the input.";
+        error.style.display="block";
+      }
+    });
+
+    clear.addEventListener("click",()=>{
+      input.value="";
+      output.value="";
+      error.style.display="none";
+      updateUI();
+    });
+
+    updateUI();
+  }
+
+  function renderDownloadMethods(){
+    document.getElementById("downloadMethods").innerHTML=methods.map(m=>`
+      <article class="card">
+        <div class="badge"><i class="fa-solid fa-folder"></i> ${escapeHTML(m.name)}</div>
+        <h3 style="margin-top:12px">${escapeHTML(m.short)}</h3>
+        <p class="muted">${escapeHTML(m.description)}</p>
+        <div class="actions">
+          <button class="btn secondary small" onclick="openMethodsFromDownload('${m.id}')">
+            <i class="fa-solid fa-arrow-right"></i> View method
+          </button>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  window.openMethodsFromDownload=function(id){
+    const methodsBtn=document.querySelector('nav button[data-page="methods"]');
+    methodsBtn.click();
+    setTimeout(()=>{
+      document.querySelectorAll(".method-item").forEach(b=>{
+        const active=b.dataset.method===id;
+        b.classList.toggle("active",active);
+        if(active) renderMethod(id);
+      });
+    },0);
+  };
+
+  async function loadRelease(){
+    const name=document.getElementById("releaseName");
+    const status=document.getElementById("releaseStatus");
+    const dot=document.getElementById("releaseDot");
+    const button=document.getElementById("releaseDownload");
+
+    try{
+      const response=await fetch(GITHUB_API,{headers:{Accept:"application/vnd.github+json"}});
+      if(!response.ok) throw new Error("GitHub API returned "+response.status);
+      const releases=await response.json();
+
+      const branchReleases=releases.filter(r=>
+        !r.draft && !r.prerelease &&
+        String(r.target_commitish||"").toLowerCase()===BRANCH.toLowerCase()
+      );
+
+      const release=branchReleases[0];
+
+      if(!release){
+        name.textContent="No Encryption branch release found";
+        status.textContent="No published release currently targets the Encryption branch. You can still browse all GitHub releases or the branch files.";
+        return;
+      }
+
+      name.textContent=release.name||release.tag_name;
+      status.innerHTML=`Released ${new Date(release.published_at||release.created_at).toLocaleDateString()} • ${release.tag_name}`;
+      dot.classList.add("live");
+
+      if(release.assets?.length){
+        button.href=release.assets[0].browser_download_url;
+      }else{
+        button.href=release.html_url;
+      }
+      button.classList.remove("disabled");
+    }catch(error){
+      name.textContent="GitHub release lookup unavailable";
+      status.textContent="Use the GitHub releases page to choose an Encryption branch release.";
+    }
+  }
+
+  renderMethods();
+  renderDownloadMethods();
+  loadRelease();
+</script>
+</body>
+</html>

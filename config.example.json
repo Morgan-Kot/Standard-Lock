@@ -1,8 +1,0 @@
-{
-  "password_hash": "",
-  "locked_extensions": ["txt", "png", "jpg", "jpeg", "gif", "pdf", "docx"],
-  "lock_all": true,
-  "exceptions": [],
-  "explicit_locked_paths": [],
-  "original_handlers": {}
-}
